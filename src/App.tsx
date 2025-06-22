@@ -1,7 +1,5 @@
-
-import { useEffect, useState } from 'react'
-import type { ChangeEvent } from 'react'
-import supabase from './supabaseClient'
+import { useEffect, useState, type ChangeEvent } from 'react'
+import { supabase } from './supabaseClient'
 import * as XLSX from 'xlsx'
 
 type Product = {
@@ -25,27 +23,26 @@ function App() {
     fetchProducts()
   }, [])
 
-  useEffect(() => {
-    applyFilters()
-  }, [selectedBrand, selectedCategory, search, products])
-
   const fetchProducts = async () => {
     const { data, error } = await supabase.from('products').select('*')
     if (error) {
-      console.error('Error fetching:', error.message)
-    } else if (data) {
-      const typedData = data as Product[]
-      const brandSet = new Set(typedData.map((p: Product) => p.brand))
-      const categorySet = new Set(typedData.map((p: Product) => p.category))
-      setProducts(typedData)
-      setFiltered(typedData)
-      setBrands(Array.from(brandSet))
-      setCategories(Array.from(categorySet))
+      console.error('Error fetching data:', error.message)
+      return
     }
+
+    const productList = data as Product[]
+    const brandSet = new Set(productList.map(p => p.brand))
+    const categorySet = new Set(productList.map(p => p.category))
+
+    setProducts(productList)
+    setFiltered(productList)
+    setBrands(Array.from(brandSet))
+    setCategories(Array.from(categorySet))
   }
 
   const applyFilters = () => {
     let filteredData = [...products]
+
     if (selectedBrand) {
       filteredData = filteredData.filter(p => p.brand === selectedBrand)
     }
@@ -61,6 +58,7 @@ function App() {
           p.category.toLowerCase().includes(s)
       )
     }
+
     setFiltered(filteredData)
   }
 
@@ -74,100 +72,80 @@ function App() {
   const exportToExcel = () => {
     const ws = XLSX.utils.json_to_sheet(filtered)
     const wb = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(wb, ws, 'Products')
+    XLSX.utils.book_append_sheet(wb, ws, 'FilteredData')
     XLSX.writeFile(wb, 'Filtered_Products.xlsx')
   }
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <h1 className="text-3xl font-bold mb-6 text-gray-800">🛒 Product Dashboard</h1>
+    <div className="min-h-screen bg-gray-100 text-gray-900 p-6">
+      <h1 className="text-3xl font-bold mb-6">🛒 Product Dashboard</h1>
 
-      {/* Filters Section */}
-      <div className="bg-white p-6 rounded-lg shadow-md mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-          {/* Search */}
-          <input
-            type="text"
-            value={search}
-            onChange={(e: ChangeEvent<HTMLInputElement>) => setSearch(e.target.value)}
-            placeholder="Search by name, brand, category"
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
+      {/* Search Input */}
+      <input
+        type="text"
+        value={search}
+        onChange={(e: ChangeEvent<HTMLInputElement>) => setSearch(e.target.value)}
+        placeholder="🔍 Search by name, brand, or category"
+        className="p-2 border border-gray-300 rounded w-full md:w-72 mb-4"
+      />
 
-          {/* Brand Filter */}
-          <select
-            value={selectedBrand}
-            onChange={(e: ChangeEvent<HTMLSelectElement>) => setSelectedBrand(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="">All Brands</option>
-            {brands.map(brand => (
-              <option key={brand} value={brand}>{brand}</option>
+      {/* Filters */}
+      <div className="flex flex-wrap gap-4 mb-4">
+        <select
+          value={selectedBrand}
+          onChange={e => setSelectedBrand(e.target.value)}
+          className="p-2 border border-gray-300 rounded"
+        >
+          <option value="">All Brands</option>
+          {brands.map((b, i) => (
+            <option key={i} value={b}>{b}</option>
+          ))}
+        </select>
+
+        <select
+          value={selectedCategory}
+          onChange={e => setSelectedCategory(e.target.value)}
+          className="p-2 border border-gray-300 rounded"
+        >
+          <option value="">All Categories</option>
+          {categories.map((c, i) => (
+            <option key={i} value={c}>{c}</option>
+          ))}
+        </select>
+
+        <button onClick={applyFilters} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Apply</button>
+        <button onClick={resetFilters} className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600">Reset</button>
+        <button onClick={exportToExcel} className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">Export</button>
+      </div>
+
+      {/* Product Table */}
+      <div className="overflow-x-auto">
+        <table className="w-full border border-gray-300 bg-white">
+          <thead className="bg-gray-200">
+            <tr>
+              <th className="p-2 border">Name</th>
+              <th className="p-2 border">Category</th>
+              <th className="p-2 border">Brand</th>
+              <th className="p-2 border">Price</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.map((p) => (
+              <tr key={p.id}>
+                <td className="p-2 border">{p.name}</td>
+                <td className="p-2 border">{p.category}</td>
+                <td className="p-2 border">{p.brand}</td>
+                <td className="p-2 border">₹{p.price}</td>
+              </tr>
             ))}
-          </select>
-
-          {/* Category Filter */}
-          <select
-            value={selectedCategory}
-            onChange={(e: ChangeEvent<HTMLSelectElement>) => setSelectedCategory(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="">All Categories</option>
-            {categories.map(category => (
-              <option key={category} value={category}>{category}</option>
-            ))}
-          </select>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="flex gap-3">
-          <button
-            onClick={resetFilters}
-            className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
-          >
-            Reset Filters
-          </button>
-          <button
-            onClick={exportToExcel}
-            className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
-          >
-            Export to Excel ({filtered.length} items)
-          </button>
-        </div>
+            {filtered.length === 0 && (
+              <tr>
+                <td className="p-2 border text-center" colSpan={4}>No results found</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
-
-      {/* Results Count */}
-      <div className="mb-4">
-        <p className="text-gray-600">
-          Showing {filtered.length} of {products.length} products
-        </p>
-      </div>
-
-      {/* Products Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {filtered.map(product => (
-          <div key={product.id} className="bg-white p-4 rounded-lg shadow-md hover:shadow-lg transition-shadow">
-            <h3 className="font-semibold text-lg mb-2 text-gray-800">{product.name}</h3>
-            <div className="space-y-1 text-sm text-gray-600">
-              <p><span className="font-medium">Brand:</span> {product.brand}</p>
-              <p><span className="font-medium">Category:</span> {product.category}</p>
-              <p className="text-lg font-bold text-green-600">${product.price.toFixed(2)}</p>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {filtered.length === 0 && products.length > 0 && (
-        <div className="text-center py-12">
-          <p className="text-gray-500 text-lg">No products match your current filters.</p>
-        </div>
-      )}
-
-      {products.length === 0 && (
-        <div className="text-center py-12">
-          <p className="text-gray-500 text-lg">Loading products...</p>
-        </div>
-      )}
     </div>
   )
 }
