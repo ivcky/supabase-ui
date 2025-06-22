@@ -1,5 +1,6 @@
-import { useEffect, useState, ChangeEvent } from 'react'
-import { supabase } from './supabaseClient'
+import { useEffect, useState } from 'react'
+import type { ChangeEvent } from 'react'
+import supabase from './supabaseClient'
 import * as XLSX from 'xlsx'
 
 type Product = {
@@ -28,10 +29,11 @@ function App() {
     if (error) {
       console.error('Error fetching:', error.message)
     } else if (data) {
-      const brandSet = new Set(data.map(p => p.brand))
-      const categorySet = new Set(data.map(p => p.category))
-      setProducts(data)
-      setFiltered(data)
+      const typedData = data as Product[]
+      const brandSet = new Set(typedData.map(p => p.brand))
+      const categorySet = new Set(typedData.map(p => p.category))
+      setProducts(typedData)
+      setFiltered(typedData)
       setBrands(Array.from(brandSet))
       setCategories(Array.from(categorySet))
     }
@@ -86,14 +88,22 @@ function App() {
 
       {/* Filters */}
       <div className="flex flex-wrap gap-4 mb-4">
-        <select value={selectedBrand} onChange={e => setSelectedBrand(e.target.value)} className="p-2 border">
+        <select
+          value={selectedBrand}
+          onChange={e => setSelectedBrand(e.target.value)}
+          className="p-2 border"
+        >
           <option value="">All Brands</option>
           {brands.map((b, i) => (
             <option key={i} value={b}>{b}</option>
           ))}
         </select>
 
-        <select value={selectedCategory} onChange={e => setSelectedCategory(e.target.value)} className="p-2 border">
+        <select
+          value={selectedCategory}
+          onChange={e => setSelectedCategory(e.target.value)}
+          className="p-2 border"
+        >
           <option value="">All Categories</option>
           {categories.map((c, i) => (
             <option key={i} value={c}>{c}</option>
